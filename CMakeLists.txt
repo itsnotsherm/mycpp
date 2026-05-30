@@ -17,3 +17,8 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(googletest)
 enable_testing()
+
+add_executable(test_vector tests/test_vector.cpp)
+target_link_libraries(test_vector GTest::gtest_main)
+include(GoogleTest)
+gtest_discover_tests(test_vector)
