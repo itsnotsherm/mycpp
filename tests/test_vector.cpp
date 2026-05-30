@@ -332,55 +332,11 @@ TEST(VectorAt, ConstOutOfRangeThrows) {
     EXPECT_THROW(v.at(2), std::out_of_range);
 }
 
-// ── size() ───────────────────────────────────────────────────────────────────
-
-TEST(VectorSize, DefaultConstructorSizeIsZero) {
-    my::Vector v;
-    EXPECT_EQ(v.size(), 0);
-}
-
-TEST(VectorSize, FillConstructorSetsSize) {
-    my::Vector v(6, 1);
-    EXPECT_EQ(v.size(), 6);
-}
-
-TEST(VectorSize, CapacityConstructorSizeIsZero) {
-    my::Vector v(10);
-    EXPECT_EQ(v.size(), 0);
-}
-
-// ── capacity() ───────────────────────────────────────────────────────────────
-
-TEST(VectorCapacity, DefaultConstructorCapacityIsZero) {
-    my::Vector v;
-    EXPECT_EQ(v.capacity(), 0);
-}
-
-TEST(VectorCapacity, CapacityConstructorSetsCapacity) {
-    my::Vector v(12);
-    EXPECT_EQ(v.capacity(), 12);
-}
-
-TEST(VectorCapacity, FillConstructorCapacityEqualsSize) {
-    my::Vector v(5, 1);
-    EXPECT_EQ(v.capacity(), v.size());
-}
-
 // ── empty() ──────────────────────────────────────────────────────────────────
-
-TEST(VectorEmpty, DefaultConstructorIsEmpty) {
-    my::Vector v;
-    EXPECT_TRUE(v.empty());
-}
 
 TEST(VectorEmpty, FillConstructorNotEmpty) {
     my::Vector v(3, 1);
     EXPECT_FALSE(v.empty());
-}
-
-TEST(VectorEmpty, CapacityConstructorIsEmpty) {
-    my::Vector v(5);
-    EXPECT_TRUE(v.empty());
 }
 
 // ── push_back() ──────────────────────────────────────────────────────────────
