@@ -15,7 +15,8 @@ namespace my {
 
         explicit Vector(const std::size_t capacity)
             : capacity_{capacity} {
-            if (capacity_ != 0) data_ = new int[capacity_];
+            if (capacity_ != 0)
+                data_ = new int[capacity_];
         }
 
         Vector(const std::size_t size, const int value)
@@ -52,7 +53,8 @@ namespace my {
         }
 
         Vector& operator=(const Vector& other) {
-            if (this == &other) return *this;
+            if (this == &other)
+                return *this;
 
             int* tmp = nullptr;
             if (other.capacity_ > 0) {
@@ -70,16 +72,17 @@ namespace my {
         }
 
         Vector& operator=(Vector&& other) noexcept {
-            if (this != &other) {
-                delete[] data_;
-                size_ = other.size_;
-                capacity_ = other.capacity_;
-                data_ = other.data_;
+            if (this == &other)
+                return *this;
 
-                other.data_ = nullptr;
-                other.size_ = 0;
-                other.capacity_ = 0;
-            }
+            delete[] data_;
+            size_ = other.size_;
+            capacity_ = other.capacity_;
+            data_ = other.data_;
+
+            other.data_ = nullptr;
+            other.size_ = 0;
+            other.capacity_ = 0;
 
             return *this;
         }
@@ -93,12 +96,15 @@ namespace my {
         }
 
         int& at(const std::size_t index) {
-            if (index >= size_) throw std::out_of_range("Index out of bounds");
+            if (index >= size_)
+                throw std::out_of_range("Index out of bounds");
+
             return data_[index];
         }
 
         const int& at(const std::size_t index) const {
-            if (index >= size_) throw std::out_of_range("Index out of bounds");
+            if (index >= size_)
+                throw std::out_of_range("Index out of bounds");
             return data_[index];
         }
 
@@ -115,19 +121,25 @@ namespace my {
         }
 
         void push_back(const int value) {
-            if (size_ == capacity_) grow();
+            if (size_ == capacity_)
+                grow();
+
             data_[size_] = value;
             size_++;
         }
 
         void pop_back() {
-            if (size_ == 0) return;
+            if (size_ == 0)
+                return;
+
             size_--;
         }
 
     private:
         void grow() {
-            if (capacity_ > (std::numeric_limits<std::size_t>::max() / 2)) throw std::length_error("Vector can no longer increase in size");
+            if (capacity_ > (std::numeric_limits<std::size_t>::max() / 2))
+                throw std::length_error("Vector can no longer increase in size");
+
             const std::size_t new_capacity = (capacity_ == 0) ? 1 : capacity_ * 2;
             int* tmp = new int[new_capacity];
             for (std::size_t i = 0; i < size_; ++i) {
