@@ -11,7 +11,7 @@ namespace my {
         std::size_t capacity_{};
 
     public:
-        explicit Vector() = default;
+        Vector() = default;
 
         explicit Vector(const std::size_t capacity)
             : capacity_{capacity} {
@@ -35,9 +35,11 @@ namespace my {
 
         Vector(const Vector& other)
             : size_{other.size_}, capacity_{other.capacity_} {
-            data_ = new int[capacity_];
-            for (std::size_t i = 0; i < size_; ++i) {
-                data_[i] = other.data_[i];
+            if (capacity_ > 0) {
+                data_ = new int[capacity_];
+                for (std::size_t i = 0; i < size_; ++i) {
+                    data_[i] = other.data_[i];
+                }
             }
         }
 
@@ -50,16 +52,20 @@ namespace my {
         }
 
         Vector& operator=(const Vector& other) {
-            if (this != &other) {
-                int* tmp = new int[other.capacity_];
-                size_ = other.size_;
-                capacity_ = other.capacity_;
-                delete[] data_;
-                data_ = tmp;
-                for (std::size_t i = 0; i < size_; ++i) {
-                    data_[i] = other.data_[i];
+            if (this == &other) return *this;
+
+            int* tmp = nullptr;
+            if (other.capacity_ > 0) {
+                tmp = new int[other.capacity_];
+                for (std::size_t i = 0; i < other.size_; ++i) {
+                    tmp[i] = other.data_[i];
                 }
             }
+
+            delete[] data_;
+            size_ = other.size_;
+            capacity_ = other.capacity_;
+            data_ = tmp;
             return *this;
         }
 
@@ -109,7 +115,7 @@ namespace my {
         }
 
         void push_back(const int value) {
-            if (size_ == capacity_) resize();
+            if (size_ == capacity_) grow();
             data_[size_] = value;
             size_++;
         }
@@ -120,7 +126,7 @@ namespace my {
         }
 
     private:
-        void resize() {
+        void grow() {
             if (capacity_ > (std::numeric_limits<std::size_t>::max() / 2)) throw std::length_error("Vector can no longer increase in size");
             const std::size_t new_capacity = (capacity_ == 0) ? 1 : capacity_ * 2;
             int* tmp = new int[new_capacity];
