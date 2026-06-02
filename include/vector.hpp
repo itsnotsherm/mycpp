@@ -109,15 +109,15 @@ namespace my {
             return data_[index];
         }
 
-        std::size_t size() const {
+        std::size_t size() const noexcept {
             return size_;
         }
 
-        std::size_t capacity() const {
+        std::size_t capacity() const noexcept {
             return capacity_;
         }
 
-        bool empty() const {
+        bool empty() const noexcept {
             return size_ == 0;
         }
 
