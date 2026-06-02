@@ -129,6 +129,14 @@ namespace my {
             size_++;
         }
 
+        void push_back(T&& value) {
+            if (size_ == capacity_)
+                grow();
+
+            data_[size_] = std::move(value);
+            size_++;
+        }
+
         void pop_back() {
             if (size_ == 0)
                 return;
