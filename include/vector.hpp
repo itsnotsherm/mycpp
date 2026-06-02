@@ -4,9 +4,10 @@
 #include <stdexcept>
 
 namespace my {
+    template <typename T>
     class Vector {
     private:
-        int* data_{};
+        T* data_{};
         std::size_t size_{};
         std::size_t capacity_{};
 
@@ -16,13 +17,13 @@ namespace my {
         explicit Vector(const std::size_t capacity)
             : capacity_{capacity} {
             if (capacity_ != 0)
-                data_ = new int[capacity_];
+                data_ = new T[capacity_];
         }
 
-        Vector(const std::size_t size, const int value)
+        Vector(const std::size_t size, const T& value)
             : size_{size}, capacity_{size} {
             if (size_ > 0) {
-               data_ = new int[capacity_];
+               data_ = new T[capacity_];
                for (std::size_t i = 0; i < size_; ++i) {
                    data_[i] = value;
                }
@@ -37,7 +38,7 @@ namespace my {
         Vector(const Vector& other)
             : size_{other.size_}, capacity_{other.capacity_} {
             if (capacity_ > 0) {
-                data_ = new int[capacity_];
+                data_ = new T[capacity_];
                 for (std::size_t i = 0; i < size_; ++i) {
                     data_[i] = other.data_[i];
                 }
@@ -56,9 +57,9 @@ namespace my {
             if (this == &other)
                 return *this;
 
-            int* tmp = nullptr;
+            T* tmp = nullptr;
             if (other.capacity_ > 0) {
-                tmp = new int[other.capacity_];
+                tmp = new T[other.capacity_];
                 for (std::size_t i = 0; i < other.size_; ++i) {
                     tmp[i] = other.data_[i];
                 }
@@ -87,22 +88,22 @@ namespace my {
             return *this;
         }
 
-        int& operator[](const std::size_t index) {
+        T& operator[](const std::size_t index) {
             return data_[index];
         }
 
-        const int& operator[](const std::size_t index) const {
+        const T& operator[](const std::size_t index) const {
             return data_[index];
         }
 
-        int& at(const std::size_t index) {
+        T& at(const std::size_t index) {
             if (index >= size_)
                 throw std::out_of_range("Index out of bounds");
 
             return data_[index];
         }
 
-        const int& at(const std::size_t index) const {
+        const T& at(const std::size_t index) const {
             if (index >= size_)
                 throw std::out_of_range("Index out of bounds");
             return data_[index];
@@ -120,7 +121,7 @@ namespace my {
             return size_ == 0;
         }
 
-        void push_back(const int value) {
+        void push_back(const T& value) {
             if (size_ == capacity_)
                 grow();
 
@@ -141,7 +142,7 @@ namespace my {
                 throw std::length_error("Vector can no longer increase in size");
 
             const std::size_t new_capacity = (capacity_ == 0) ? 1 : capacity_ * 2;
-            int* tmp = new int[new_capacity];
+            T* tmp = new T[new_capacity];
             for (std::size_t i = 0; i < size_; ++i) {
                 tmp[i] = data_[i];
             }
