@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <limits>
 #include <stdexcept>
+#include <utility>
 
 namespace my {
     template <typename T>
@@ -17,30 +18,30 @@ namespace my {
         explicit Vector(const std::size_t capacity)
             : capacity_{capacity} {
             if (capacity_ != 0)
-                data_ = new T[capacity_];
+                data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T)));
         }
 
         Vector(const std::size_t size, const T& value)
             : size_{size}, capacity_{size} {
             if (size_ > 0) {
-               data_ = new T[capacity_];
+               data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T)));
                for (std::size_t i = 0; i < size_; ++i) {
-                   data_[i] = value;
+                   ::new (data_ + i) T(value);
                }
             }
 
         }
 
         ~Vector() {
-            delete[] data_;
+            destroy_and_free();
         }
 
         Vector(const Vector& other)
             : size_{other.size_}, capacity_{other.capacity_} {
             if (capacity_ > 0) {
-                data_ = new T[capacity_];
+                data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T)));
                 for (std::size_t i = 0; i < size_; ++i) {
-                    data_[i] = other.data_[i];
+                    ::new (data_ + i) T(other.data_[i]);
                 }
             }
         }
@@ -59,13 +60,13 @@ namespace my {
 
             T* tmp = nullptr;
             if (other.capacity_ > 0) {
-                tmp = new T[other.capacity_];
+                tmp = static_cast<T*>(::operator new(other.capacity_ * sizeof(T)));
                 for (std::size_t i = 0; i < other.size_; ++i) {
-                    tmp[i] = other.data_[i];
+                    ::new (tmp + i) T(other.data_[i]);
                 }
             }
 
-            delete[] data_;
+            destroy_and_free();
             size_ = other.size_;
             capacity_ = other.capacity_;
             data_ = tmp;
@@ -76,7 +77,7 @@ namespace my {
             if (this == &other)
                 return *this;
 
-            delete[] data_;
+            destroy_and_free();
             size_ = other.size_;
             capacity_ = other.capacity_;
             data_ = other.data_;
@@ -125,7 +126,7 @@ namespace my {
             if (size_ == capacity_)
                 grow();
 
-            data_[size_] = value;
+            ::new (data_ + size_) T(value); // construct T at address (data_ + size_ offset)
             size_++;
         }
 
@@ -133,7 +134,7 @@ namespace my {
             if (size_ == capacity_)
                 grow();
 
-            data_[size_] = std::move(value);
+            ::new (data_ + size_) T(std::move(value));
             size_++;
         }
 
@@ -142,6 +143,7 @@ namespace my {
                 return;
 
             size_--;
+            data_[size_].~T();
         }
 
     private:
@@ -150,13 +152,21 @@ namespace my {
                 throw std::length_error("Vector can no longer increase in size");
 
             const std::size_t new_capacity = (capacity_ == 0) ? 1 : capacity_ * 2;
-            T* tmp = new T[new_capacity];
+            T* tmp = static_cast<T*>(::operator new(new_capacity * sizeof(T)));
             for (std::size_t i = 0; i < size_; ++i) {
-                tmp[i] = data_[i];
+                ::new (tmp + i) T(data_[i]);
             }
-            delete[] data_;
+
+            destroy_and_free();
             capacity_ = new_capacity;
             data_ = tmp;
+        }
+
+        void destroy_and_free() noexcept {
+            for (std::size_t i = 0; i < size_; ++i)
+                data_[i].~T();
+
+            ::operator delete(data_);
         }
     };
 }
