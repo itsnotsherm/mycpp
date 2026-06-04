@@ -22,12 +22,18 @@ namespace my {
         }
 
         Vector(const std::size_t size, const T& value)
-            : size_{size}, capacity_{size} {
-            if (size_ > 0) {
-               data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T)));
-               for (std::size_t i = 0; i < size_; ++i) {
-                   ::new (data_ + i) T(value);
-               }
+            : capacity_{size} {
+            if (size > 0) {
+                try {
+                    data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T)));
+                    for (std::size_t i = 0; i < size; ++i) {
+                        ::new (data_ + i) T(value);
+                        size_++;
+                    }
+                } catch (...) {
+                    destroy_and_free();
+                    throw;
+                }
             }
 
         }
@@ -37,11 +43,17 @@ namespace my {
         }
 
         Vector(const Vector& other)
-            : size_{other.size_}, capacity_{other.capacity_} {
+            : capacity_{other.capacity_} {
             if (capacity_ > 0) {
-                data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T)));
-                for (std::size_t i = 0; i < size_; ++i) {
-                    ::new (data_ + i) T(other.data_[i]);
+                try {
+                    data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T)));
+                    for (std::size_t i = 0; i < other.size_; ++i) {
+                        ::new (data_ + i) T(other.data_[i]);
+                        size_++;
+                    }
+                } catch (...) {
+                    destroy_and_free();
+                    throw;
                 }
             }
         }
@@ -54,38 +66,8 @@ namespace my {
             other.capacity_ = 0;
         }
 
-        Vector& operator=(const Vector& other) {
-            if (this == &other)
-                return *this;
-
-            T* tmp = nullptr;
-            if (other.capacity_ > 0) {
-                tmp = static_cast<T*>(::operator new(other.capacity_ * sizeof(T)));
-                for (std::size_t i = 0; i < other.size_; ++i) {
-                    ::new (tmp + i) T(other.data_[i]);
-                }
-            }
-
-            destroy_and_free();
-            size_ = other.size_;
-            capacity_ = other.capacity_;
-            data_ = tmp;
-            return *this;
-        }
-
-        Vector& operator=(Vector&& other) noexcept {
-            if (this == &other)
-                return *this;
-
-            destroy_and_free();
-            size_ = other.size_;
-            capacity_ = other.capacity_;
-            data_ = other.data_;
-
-            other.data_ = nullptr;
-            other.size_ = 0;
-            other.capacity_ = 0;
-
+        Vector& operator=(Vector other) {
+            swap(*this, other);
             return *this;
         }
 
@@ -146,6 +128,13 @@ namespace my {
             data_[size_].~T();
         }
 
+        friend void swap(Vector& first, Vector& second) noexcept {
+            using std::swap;
+            swap(first.data_, second.data_);
+            swap(first.size_, second.size_);
+            swap(first.capacity_, second.capacity_);
+        }
+
     private:
         void grow() {
             if (capacity_ > (std::numeric_limits<std::size_t>::max() / 2))
@@ -153,8 +142,15 @@ namespace my {
 
             const std::size_t new_capacity = (capacity_ == 0) ? 1 : capacity_ * 2;
             T* tmp = static_cast<T*>(::operator new(new_capacity * sizeof(T)));
-            for (std::size_t i = 0; i < size_; ++i) {
-                ::new (tmp + i) T(data_[i]);
+            std::size_t n = 0;
+            try {
+                for (; n < size_; ++n)
+                    ::new (tmp + n) T(data_[n]);
+            } catch (...) {
+                for (std::size_t i = 0; i < n; ++i)
+                    tmp[i].~T();
+                ::operator delete(tmp);
+                throw;
             }
 
             destroy_and_free();
