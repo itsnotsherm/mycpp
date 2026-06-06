@@ -11,20 +11,26 @@ namespace my {
         T* data_{};
         std::size_t size_{};
         std::size_t capacity_{};
+        static constexpr std::size_t MAX_CAPACITY = std::numeric_limits<std::size_t>::max();
 
     public:
         Vector() = default;
 
         explicit Vector(const std::size_t capacity)
             : capacity_{capacity} {
-            if (capacity_ != 0)
+            if (capacity_ != 0) {
+                if (maxCapacityExceeded(capacity_))
+                    throw std::length_error("Vector capacity exceeds the maximum allowed");
                 data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T)));
+            }
         }
 
         Vector(const std::size_t size, const T& value)
             : capacity_{size} {
             if (size > 0) {
                 try {
+                    if (maxCapacityExceeded(capacity_))
+                        throw std::length_error("Vector capacity exceeds the maximum allowed");
                     data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T)));
                     for (std::size_t i = 0; i < size; ++i) {
                         ::new (data_ + i) T(value);
@@ -46,6 +52,8 @@ namespace my {
             : capacity_{other.capacity_} {
             if (capacity_ > 0) {
                 try {
+                    if (maxCapacityExceeded(capacity_))
+                        throw std::length_error("Vector capacity is above the maximum allowed");
                     data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T)));
                     for (std::size_t i = 0; i < other.size_; ++i) {
                         ::new (data_ + i) T(other.data_[i]);
@@ -137,10 +145,13 @@ namespace my {
 
     private:
         void grow() {
-            if (capacity_ > (std::numeric_limits<std::size_t>::max() / 2))
+            if (capacity_ > (MAX_CAPACITY / 2))
                 throw std::length_error("Vector can no longer increase in size");
 
             const std::size_t new_capacity = (capacity_ == 0) ? 1 : capacity_ * 2;
+            if (maxCapacityExceeded(new_capacity))
+                throw std::length_error("Vector can no longer increase in size");
+
             T* tmp = static_cast<T*>(::operator new(new_capacity * sizeof(T)));
             std::size_t n = 0;
             try {
@@ -163,6 +174,10 @@ namespace my {
                 data_[i].~T();
 
             ::operator delete(data_);
+        }
+
+        [[nodiscard]] bool maxCapacityExceeded(const std::size_t capacity) const {
+            return capacity > MAX_CAPACITY / sizeof(T);
         }
     };
 }
