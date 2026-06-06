@@ -21,7 +21,7 @@ namespace my {
             if (capacity_ != 0) {
                 if (maxCapacityExceeded(capacity_))
                     throw std::length_error("Vector capacity exceeds the maximum allowed");
-                data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T)));
+                data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T), std::align_val_t{alignof(T)}));
             }
         }
 
@@ -31,7 +31,7 @@ namespace my {
                 try {
                     if (maxCapacityExceeded(capacity_))
                         throw std::length_error("Vector capacity exceeds the maximum allowed");
-                    data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T)));
+                    data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T), std::align_val_t{alignof(T)}));
                     for (std::size_t i = 0; i < size; ++i) {
                         ::new (data_ + i) T(value);
                         size_++;
@@ -54,7 +54,7 @@ namespace my {
                 try {
                     if (maxCapacityExceeded(capacity_))
                         throw std::length_error("Vector capacity is above the maximum allowed");
-                    data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T)));
+                    data_ = static_cast<T*>(::operator new(capacity_ * sizeof(T), std::align_val_t{alignof(T)}));
                     for (std::size_t i = 0; i < other.size_; ++i) {
                         ::new (data_ + i) T(other.data_[i]);
                         size_++;
@@ -152,7 +152,7 @@ namespace my {
             if (maxCapacityExceeded(new_capacity))
                 throw std::length_error("Vector can no longer increase in size");
 
-            T* tmp = static_cast<T*>(::operator new(new_capacity * sizeof(T)));
+            T* tmp = static_cast<T*>(::operator new(new_capacity * sizeof(T), std::align_val_t{alignof(T)}));
             std::size_t n = 0;
             try {
                 for (; n < size_; ++n)
@@ -160,7 +160,7 @@ namespace my {
             } catch (...) {
                 for (std::size_t i = 0; i < n; ++i)
                     tmp[i].~T();
-                ::operator delete(tmp);
+                ::operator delete(tmp, std::align_val_t{alignof(T)});
                 throw;
             }
 
@@ -173,7 +173,7 @@ namespace my {
             for (std::size_t i = 0; i < size_; ++i)
                 data_[i].~T();
 
-            ::operator delete(data_);
+            ::operator delete(data_,std::align_val_t{alignof(T)});
         }
 
         [[nodiscard]] bool maxCapacityExceeded(const std::size_t capacity) const {
