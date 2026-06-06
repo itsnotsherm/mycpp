@@ -108,7 +108,7 @@ namespace my {
             if (size_ == capacity_)
                 grow();
 
-            ::new (data_ + size_) T(value); // construct T at address (data_ + size_ offset)
+            ::new (data_ + size_) T(value);
             size_++;
         }
 
