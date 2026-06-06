@@ -145,7 +145,7 @@ namespace my {
             std::size_t n = 0;
             try {
                 for (; n < size_; ++n)
-                    ::new (tmp + n) T(data_[n]);
+                    ::new (tmp + n) T(std::move_if_noexcept(data_[n]));
             } catch (...) {
                 for (std::size_t i = 0; i < n; ++i)
                     tmp[i].~T();
