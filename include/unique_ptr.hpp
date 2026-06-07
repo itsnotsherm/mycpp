@@ -62,4 +62,9 @@ namespace my {
             return ptr_ != nullptr;
         }
     };
+
+    template <typename T, typename... Args>
+    Unique_Ptr<T> make_unique(Args&&... args) {
+        return Unique_Ptr<T>(new T(std::forward<Args>(args)...));
+    }
 };
