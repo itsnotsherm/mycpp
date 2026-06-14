@@ -3,29 +3,70 @@
 #include <utility>
 
 namespace my {
+    struct ControlBlockBase {
+        std::atomic<long> reference_count_{1};
+
+        ControlBlockBase() = default;
+
+        long increment() {
+            return reference_count_.fetch_add(1, std::memory_order_relaxed);
+        }
+
+        long decrement() {
+            return reference_count_.fetch_sub(1, std::memory_order_acq_rel);
+        }
+
+        long getCount() const {
+            return reference_count_.load(std::memory_order_relaxed);
+        }
+
+        virtual void dispose() noexcept = 0;
+        virtual ~ControlBlockBase() = default;
+    };
+
+    template <typename T>
+    struct PtrBlock : ControlBlockBase {
+        T* ptr_{};
+
+        explicit PtrBlock(T* ptr)
+            : ptr_{ptr} {
+
+        }
+
+        void dispose() noexcept override {
+            delete ptr_;
+        }
+    };
+
+    template <typename T>
+    struct InPlaceBlock : ControlBlockBase {
+        alignas(T) unsigned char storage_[sizeof(T)];
+
+        template <typename... Args>
+        explicit InPlaceBlock(Args&&... args) {
+            ::new (storage_) T(std::forward<Args>(args)...);
+        }
+
+        T* get() noexcept {
+            return reinterpret_cast<T*>(storage_);
+        }
+
+        void dispose() noexcept override {
+            get()->~T();
+        }
+    };
+
     template <typename T>
     class Shared_Ptr {
     private:
-        struct ControlBlock {
-            std::atomic<long> reference_count_{1};
-
-            ControlBlock() = default;
-
-            long increment() {
-                return reference_count_.fetch_add(1, std::memory_order_relaxed);
-            }
-
-            long decrement() {
-                return reference_count_.fetch_sub(1, std::memory_order_acq_rel);
-            }
-
-            long getCount() const {
-                return reference_count_.load(std::memory_order_relaxed);
-            }
-        };
-
         T* ptr_{};
-        ControlBlock* blk_{};
+        ControlBlockBase* blk_{};
+
+        Shared_Ptr(T* ptr, ControlBlockBase* blk) noexcept
+            : ptr_{ptr}, blk_{blk} {}
+
+        template <typename U, typename... Args>
+        friend Shared_Ptr<U> make_shared(Args&&...);
 
         friend void swap(Shared_Ptr& a, Shared_Ptr& b) noexcept {
             using std::swap;
@@ -37,13 +78,13 @@ namespace my {
         Shared_Ptr() = default;
 
         explicit Shared_Ptr(T* ptr)
-            : ptr_{ptr}, blk_{new ControlBlock{}} {
+            : ptr_{ptr}, blk_{(ptr) ? new PtrBlock<T>(ptr) : nullptr} {
 
         }
 
         ~Shared_Ptr() {
             if (blk_ && blk_->decrement() == 1) {
-                delete ptr_;
+                blk_->dispose();
                 delete blk_;
             }
         }
@@ -73,13 +114,12 @@ namespace my {
         }
 
         void reset(T* ptr = nullptr) {
-            ControlBlock* tmp = (ptr) ? new ControlBlock{} : nullptr;
-            auto old_ptr = ptr_;
+            PtrBlock<T>* tmp = (ptr) ? new PtrBlock{ptr} : nullptr;
             auto old_blk = blk_;
             ptr_ = ptr;
             blk_ = tmp;
             if (old_blk && old_blk->decrement() == 1) {
-                delete old_ptr;
+                old_blk->dispose();
                 delete old_blk;
             }
         }
@@ -99,6 +139,7 @@ namespace my {
 
     template <typename T, typename... Args>
     Shared_Ptr<T> make_shared(Args&&... args) {
-        return Shared_Ptr<T>(new T(std::forward<Args>(args)...));
+        auto* blk = new InPlaceBlock<T>(std::forward<Args>(args)...);
+        return Shared_Ptr<T>(blk->get(), blk);
     }
 }
