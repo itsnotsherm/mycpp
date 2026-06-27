@@ -5,6 +5,7 @@
 namespace my {
     struct ControlBlockBase {
         std::atomic<long> reference_count_{1};
+        std::atomic<long> weak_count_{1};
 
         ControlBlockBase() = default;
 
@@ -14,6 +15,14 @@ namespace my {
 
         long decrement() {
             return reference_count_.fetch_sub(1, std::memory_order_acq_rel);
+        }
+
+        long acquire_weak() {
+            return weak_count_.fetch_add(1, std::memory_order_relaxed);
+        }
+
+        long release_weak() {
+            return weak_count_.fetch_sub(1, std::memory_order_acq_rel);
         }
 
         long getCount() const {
