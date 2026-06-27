@@ -78,8 +78,15 @@ namespace my {
         Shared_Ptr() = default;
 
         explicit Shared_Ptr(T* ptr)
-            : ptr_{ptr}, blk_{(ptr) ? new PtrBlock<T>(ptr) : nullptr} {
-
+            : ptr_{ptr} {
+            if (ptr) {
+                try {
+                    blk_ = new PtrBlock(ptr);
+                } catch (...) {
+                    delete ptr_;
+                    throw;
+                }
+            }
         }
 
         ~Shared_Ptr() {
