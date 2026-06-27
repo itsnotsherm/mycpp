@@ -25,6 +25,14 @@ namespace my {
             return weak_count_.fetch_sub(1, std::memory_order_acq_rel);
         }
 
+        void release_shared() noexcept {
+            if (decrement() == 1) {
+                dispose();
+                if (release_weak() == 1)
+                    delete this;
+            }
+        }
+
         long getCount() const {
             return reference_count_.load(std::memory_order_relaxed);
         }
@@ -99,10 +107,8 @@ namespace my {
         }
 
         ~Shared_Ptr() {
-            if (blk_ && blk_->decrement() == 1) {
-                blk_->dispose();
-                delete blk_;
-            }
+            if (blk_)
+                blk_->release_shared();
         }
 
         Shared_Ptr(const Shared_Ptr& other)
@@ -134,10 +140,9 @@ namespace my {
             auto old_blk = blk_;
             ptr_ = ptr;
             blk_ = tmp;
-            if (old_blk && old_blk->decrement() == 1) {
-                old_blk->dispose();
-                delete old_blk;
-            }
+
+            if (old_blk)
+                old_blk->release_shared();
         }
 
         T* get() const noexcept {
