@@ -17,19 +17,29 @@ namespace my {
             return reference_count_.fetch_sub(1, std::memory_order_acq_rel);
         }
 
+        bool try_increment() {
+            long cnt = reference_count_.load(std::memory_order_relaxed);
+            while (cnt != 0) {
+                if (reference_count_.compare_exchange_weak(
+                    cnt, cnt+1, std::memory_order_acq_rel, std::memory_order_relaxed))
+                    return true;
+            }
+            return false;
+        }
+
         long acquire_weak() {
             return weak_count_.fetch_add(1, std::memory_order_relaxed);
         }
 
-        long release_weak() {
-            return weak_count_.fetch_sub(1, std::memory_order_acq_rel);
+        void release_weak() {
+            if (weak_count_.fetch_sub(1, std::memory_order_acq_rel) == 1)
+                delete this;
         }
 
         void release_shared() noexcept {
             if (decrement() == 1) {
                 dispose();
-                if (release_weak() == 1)
-                    delete this;
+                release_weak();
             }
         }
 
@@ -73,6 +83,8 @@ namespace my {
         }
     };
 
+    template <typename U> class Weak_Ptr;
+
     template <typename T>
     class Shared_Ptr {
     private:
@@ -90,6 +102,8 @@ namespace my {
             swap(a.ptr_, b. ptr_);
             swap(a.blk_, b.blk_);
         }
+
+        template <typename U> friend class Weak_Ptr;
 
     public:
         Shared_Ptr() = default;
@@ -155,6 +169,78 @@ namespace my {
 
         long use_count() const noexcept {
             return (blk_) ? blk_->getCount() : 0;
+        }
+    };
+
+    template <typename T>
+    class Weak_Ptr {
+    private:
+        T* ptr_{};
+        ControlBlockBase* blk_{};
+    public:
+        Weak_Ptr() = default;
+
+        Weak_Ptr(const Shared_Ptr<T>& ptr)
+            : ptr_{ptr.ptr_}, blk_ {ptr.blk_} {
+            if (blk_)
+                blk_->acquire_weak();
+        }
+
+        ~Weak_Ptr() {
+            if (blk_)
+                blk_->release_weak();
+        }
+
+        Weak_Ptr(const Weak_Ptr& other)
+            : ptr_{other.ptr_}, blk_{other.blk_} {
+            if (blk_)
+                blk_->acquire_weak();
+        }
+
+        Weak_Ptr(Weak_Ptr&& other) noexcept
+            : ptr_{std::exchange(other.ptr_, nullptr)}, blk_{std::exchange(other.blk_, nullptr)} {
+        }
+
+        Weak_Ptr& operator=(const Weak_Ptr& other) {
+            if (this != &other) {
+                T* old_ptr = ptr_;
+                ControlBlockBase* old_blk = blk_;
+
+                ptr_ = other.ptr_;
+                blk_ = other.blk_;
+
+                if (blk_)
+                    blk_->acquire_weak();
+
+                if (old_blk)
+                    old_blk->release_weak();
+            }
+            return *this;
+        }
+
+        Weak_Ptr& operator=(Weak_Ptr&& other) noexcept {
+            if (this != &other) {
+                if (blk_)
+                    blk_->release_weak();
+
+                ptr_ = std::exchange(other.ptr_, nullptr);
+                blk_ = std::exchange(other.blk_, nullptr);
+            }
+            return *this;
+        }
+
+        long use_count() const noexcept {
+            return (blk_) ? blk_->getCount() : 0;
+        }
+
+        bool expired() const noexcept {
+            return use_count() == 0;
+        }
+
+        Shared_Ptr<T> lock() const noexcept {
+            if (blk_ && blk_->try_increment())
+                return Shared_Ptr<T>(ptr_, blk_);
+            return Shared_Ptr<T>{};
         }
     };
 
