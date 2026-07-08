@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -35,6 +36,49 @@ namespace my {
                 value_.~T();
         }
 
+        constexpr Optional(const Optional& other) {
+            if (other.has_value_) {
+                std::construct_at(&value_, other.value_);
+                has_value_ = true;
+            }
+        }
+
+        constexpr Optional(Optional&& other) noexcept(std::is_nothrow_move_constructible_v<T>) {
+            if (other.has_value_) {
+                std::construct_at(&value_, std::move(other.value_));
+                has_value_ = true;
+            }
+        }
+
+        constexpr Optional& operator=(const Optional& other) {
+            if (other.has_value_) {
+                if (has_value_)
+                    value_ = other.value_;
+                else {
+                    std::construct_at(&value_, other.value_);
+                    has_value_ = true;
+                }
+            } else {
+                reset();
+            }
+            return *this;
+        }
+
+        constexpr Optional& operator=(Optional&& other) noexcept(std::is_nothrow_move_assignable_v<T>
+                                                                && std::is_nothrow_move_constructible_v<T>) {
+            if (other.has_value_) {
+                if (has_value_)
+                    value_ = std::move(other.value_);
+                else {
+                    std::construct_at(&value_, std::move(other.value_));
+                    has_value_ = true;
+                }
+            } else {
+                reset();
+            }
+            return *this;
+        }
+
         constexpr Optional(nullopt_t) noexcept
             : dummy_{} {
 
@@ -48,6 +92,25 @@ namespace my {
         constexpr Optional(T&& value) noexcept(std::is_nothrow_move_constructible_v<T>)
             : value_{std::move(value)}, has_value_{true} {
 
+        }
+
+        constexpr Optional& operator=(nullopt_t) noexcept {
+            reset();
+            return *this;
+        }
+
+        constexpr Optional& operator=(const T& value) noexcept(std::is_nothrow_copy_constructible_v<T>) {
+            reset();
+            std::construct_at(&value_, value);
+            has_value_ = true;
+            return *this;
+        }
+
+        constexpr Optional& operator=(T&& value) noexcept(std::is_nothrow_move_constructible_v<T>) {
+            reset();
+            std::construct_at(&value_, std::move(value));
+            has_value_ = true;
+            return *this;
         }
 
         constexpr bool has_value() const noexcept {
