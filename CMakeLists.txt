@@ -6,7 +6,14 @@ project(mycpp)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-include_directories(include)
+add_library(mycpp INTERFACE)
+target_include_directories(mycpp INTERFACE include)
+
+find_package(Threads REQUIRED)
+
+add_executable(examples src/main.cpp)
+target_link_libraries(examples PRIVATE mycpp Threads::Threads)
+
 include(FetchContent)
 
 FetchContent_Declare(
