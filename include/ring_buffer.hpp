@@ -41,9 +41,9 @@ namespace my {
             if (empty())
                 return false;
             out = std::move(buffer_[head_]);
+            buffer_[head_] = T{};
             head_ = (head_ + 1 == capacity()) ? 0 : head_ + 1;
             size_--;
-            buffer_[head_] = T{};
             return true;
         }
 
